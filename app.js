@@ -19,10 +19,12 @@ var playerTurn = true;
 var playerShipPoints = 0;   // ship cells count in player board
 shipsLengths.map(el => playerShipPoints += el);
 var computerShipPoints = playerShipPoints;
+var playerRemainingShips = [...shipsLengths.sort((a, b) => b - a)]
 
-var whatComputerKnowBoard = []; // board only with that, what computer see in player board
-// in whatComputerKnowBoard 0 - blank cell, 1 - hit cell, 2- not hit cell
-var notDestroyedByComputerShipPos = []; // var to store pos of ship cell that was not destroyed yet
+var computerKnowledgeBoard = []; // board only with that, what computer see in player board
+// in computerKnowledgeBoard 0 - blank cell, 1 - hit cell, 2- not hit cell
+var findedPlayerShipPos = []; // var to store pos of ship cell that was not destroyed yet
+var shotingShipLen = 0;
 
 function start(){
     const computerBoardParrent = document.querySelector('.computerBoard');
@@ -32,7 +34,7 @@ function start(){
         console.log('preparing game');
         fillBoard(playerBoard);
         fillBoard(computerBoard);
-        fillBoard(whatComputerKnowBoard);
+        fillBoard(computerKnowledgeBoard);
         setShipsInComputerBoardtable();
         renderBoardByArray();
         renderBoardByArray(false);
@@ -517,10 +519,14 @@ function start(){
         var tc = compShotPos[1]
         var hit = shot(tr, tc, false);
         if (hit){
-            whatComputerKnowBoard[tr][tc] = 1
+            computerKnowledgeBoard[tr][tc] = 1
+            findedPlayerShipPos = [tr, tc]
+            shotingShipLen ++;
         } else {
-            whatComputerKnowBoard[tr][tc] = 2
+            computerKnowledgeBoard[tr][tc] = 2
         }
+        console.log(`Computer maked turn tr ${tr} tc ${tc}, hit ${hit}`);
+        console.log('computerKnowledgeBoard', computerKnowledgeBoard);
     }
 
     function shot(row, column, byPlayer=true){
@@ -552,7 +558,6 @@ function start(){
         }
         reRenderBoardByArray(!byPlayer);
         checkIfSomeoneLose();
-        console.log([...board]);
         return hit;
     }
 
@@ -595,21 +600,228 @@ function start(){
         }
 
         if (! findNotHitCell){   // underlining if not find ship cell that is not hit
-            console.log(allPos);
+            var shipLen = 0
             allPos.forEach((pos) => {
                 board[pos[0]][pos[1]] = 7;
+                shipLen ++;
             })
         }
+        return !findNotHitCell;
     }
     
     function computerPrepareShot(){
         // in this place are main computer AI to make good shots
+        if (shotingShipLen >= playerRemainingShips[0]){
+            computerKnowDestoryShip(playerRemainingShips[0]);
+            var pos = normalComputerBehaviour()
+            return pos
+        }
+        if (findedPlayerShipPos.length > 0){
+            var pos = computerwhenHasShipToDestroy();
+            return pos;
+        }
+        var pos = normalComputerBehaviour()
+        return pos
+    }
+
+    function computerKnowDestoryShip(shipLen){
+        console.log('Computer destroy Ship at len', shipLen);
+        findedPlayerShipPos = [];
+        shotingShipLen = 0;
+        var shipLenIdx = playerRemainingShips.indexOf(shipLen);
+        playerRemainingShips.splice(shipLenIdx, 1);
+    }
+
+    function normalComputerBehaviour(){
+        var tr;
+        var tc;
+        var shotCell;
+
+        function posOk(){
+            if ((shotCell == 1) || (shotCell == 2)) {return false}  // checking if shot in actual shoted cell
+
+            for (var trIter = tr - 1; trIter <= tr + 1; trIter++){      //checking if shot near ship
+                for (var tcIter = tc - 1; tcIter <= tc + 1; tcIter++){
+                    var cell = computerKnowledgeBoard[trIter][tcIter];
+                    if (cell == 1) {return false}
+                }
+            }
+
+            var longestShip = playerRemainingShips[0]   //to finding pos whene most long ship can be located
+            var mostMatchingLen = 0
+            for (var trIter = tr - longestShip; trIter <= tr + longestShip; trIter++){  // loop for all vertical pos when probably ship can be
+                if ((trIter < 1) || (trIter > 10)) {continue}
+                var canLocate = true;
+                
+                for (var trIter2 = trIter - 1; trIter2 <= trIter + 1; trIter2++){   // loop checking for can ideally locate ship in that cell
+                    for (var tcIter2 = tc - 1; tcIter2 <= tc + 1; tcIter2++){
+                        var cellVar = computerKnowledgeBoard[trIter2][tcIter2]
+                        if (cellVar == 1){ 
+                            canLocate = false;
+                            break;
+                        }
+                    }
+                }
+
+                var cellVar = computerKnowledgeBoard[trIter][tc]
+                if ((canLocate) && (cellVar == 0)){
+                    mostMatchingLen ++;
+                } else {
+                    mostMatchingLen = 0;
+                }
+                if (mostMatchingLen >= longestShip) {return true}
+            }
+
+            for (var tcIter = tc - longestShip; tcIter <= tc + longestShip; tcIter++){  // loop for all horizontal pos when probably ship can be
+                if ((tcIter < 1) || (tcIter > 10)) {continue}
+                var canLocate = true;
+
+                for (var trIter2 = tr - 1; trIter2 <= tr + 1; trIter2++){       // loop checking for can ideally locate ship in that cell
+                    for (var tcIter2 = tcIter - 1; tcIter2 <= tcIter + 1; tcIter2++){
+                        var cellVar = computerKnowledgeBoard[trIter2][tcIter2]
+                        if (cellVar == 1){ 
+                            canLocate = false;
+                            break;
+                        }
+                    }
+                }
+
+                var cellVar = computerKnowledgeBoard[tr][tcIter]
+                if ((canLocate) && (cellVar == 0)){
+                    mostMatchingLen ++;
+                } else {
+                    mostMatchingLen = 0;
+                }
+                if (mostMatchingLen >= longestShip) {return true}
+            }
+            return false;
+        }
+
+        var i = 0;
         do {
-            var tr = Math.round(Math.random() * 9) + 1
-            var tc = Math.round(Math.random() * 9) + 1
-            var shotCell = whatComputerKnowBoard[tr][tc]
-        } while ((shotCell == 1) || (shotCell == 2));
-        return [tr, tc]
+            i ++
+            if (i > 80){ 
+                console.log('ERROR: loop finding the best optimal position computer shot take too long');
+                break;
+            }
+            tr = Math.round(Math.random() * 9) + 1;
+            tc = Math.round(Math.random() * 9) + 1;
+            shotCell = computerKnowledgeBoard[tr][tc];
+        } while (!posOk());
+        return [tr, tc];
+    }
+
+    function computerwhenHasShipToDestroy(){
+        // returning pos to shot
+        console.log('computerwhenHasShipToDestroy()');
+        var fr = findedPlayerShipPos[0] // finded row
+        var fc = findedPlayerShipPos[1] //finded column
+        var positions = [[fr - 1, fc], [fr, fc + 1], [fr + 1, fc], [fr, fc - 1]]    // in system N, E, S, W
+        var nearPosStatus = [computerKnowledgeBoard[positions[0][0]][positions[0][1]], computerKnowledgeBoard[positions[1][0]][positions[1][1]],
+         computerKnowledgeBoard[positions[2][0]][positions[2][1]], computerKnowledgeBoard[positions[3][0]][positions[3][1]]]  
+        // in system N, E, S, W, 0 - blank, 1 - hit, 2 - not hit, 3 - beyond edge
+
+        // loading beyond edge
+        if (fr - 1 <= 0){
+            nearPosStatus[0] = 3
+        }
+        if (fc + 1 >= 11){
+            nearPosStatus[1] = 3
+        }
+        if (fr + 1 >= 11){
+            nearPosStatus[2] = 3
+        }
+        if (fc - 1 <= 0){
+            nearPosStatus[3] = 3
+        }
+
+        var hitIndex = nearPosStatus.indexOf(1);
+        if (hitIndex != -1){
+            var otherSideIndex = (hitIndex + 2) % 4   // checking pos at other side
+            var checkingVal = nearPosStatus[otherSideIndex]
+            if (checkingVal == 0){  // if at other side is not trying shot, try
+                console.log('returning pos', positions[otherSideIndex]);
+                return positions[otherSideIndex]
+            } else if (checkingVal == 1){   // this situation can not be true
+                console.log('ERROR: checking pos has near 2 shoted positions');
+                return false;
+            } else {    // if find at other side not hit or edge, then check other end of ship
+                var checkingPos = positions[hitIndex]
+                var checkingVar = computerKnowledgeBoard[checkingPos[0]][checkingPos[1]]
+                var shipLen = 1;
+                while(checkingVar == 1){    // loop finding other end of ship
+                    shipLen ++;
+                    if (shipLen > 40) {console.log('ERROR: finding other end of ship take too long'); return False;}
+                    switch (hitIndex) {
+                        case 0:
+                            checkingPos[0] --;
+                            break;
+                        case 1:
+                            checkingPos[1] ++;
+                            break;
+                        case 2:
+                            checkingPos[0] ++;
+                            break;
+                        case 3:
+                            checkingPos[1] --;
+                            break;
+                    }
+                    checkingVar = computerKnowledgeBoard[checkingPos[0]][checkingPos[1]]
+                }
+                if (checkingVar == 2){
+                    computerKnowDestoryShip(shipLen);
+                    return normalComputerBehaviour();
+                }
+                console.log('returning pos', checkingPos);
+                return checkingPos  // returning first not ship pos
+            }
+        }
+
+        // to know when they destory one-cell ship
+        var haveBlank = nearPosStatus.includes(0);
+        if (! haveBlank){
+            computerKnowDestoryShip(1)
+            return normalComputerBehaviour();
+        }
+
+        // when not find any hit
+        var i = 0
+        var randomHitVal
+        var randomHitPos
+
+        function randomHitOk(){
+            if (randomHitVal != 0){return false};       // check if can shot in block
+
+            var checkingPos = [positions[randomHitPos][0], positions[randomHitPos][1]]
+            switch (randomHitPos) {     // check if next ship is on other side, if yes, then return false
+                case 0:
+                    checkingPos[0] --;
+                    break;
+                case 1:
+                    checkingPos[1] ++;
+                    break;
+                case 2:
+                    checkingPos[0] ++;
+                    break;
+                case 3:
+                    checkingPos[1] --;
+                    break;
+            }
+            if (computerKnowledgeBoard[checkingPos[0]][checkingPos[1]] == 1) {
+                return false
+            }
+            return true;
+        }
+
+        do {
+            i ++
+            if (i > 40) {console.log('ERROR: finding random balank place around hit take too long'); return False;}
+            randomHitPos = Math.round(Math.random() * 3);
+            randomHitVal = nearPosStatus[randomHitPos];
+        } while (!randomHitOk())
+
+        console.log('returning pos', positions[randomHitPos]);
+        return positions[randomHitPos];
     }
 
     function checkIfSomeoneLose(){
