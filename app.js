@@ -206,7 +206,9 @@ function start(){
                     if ((showShips) || (player)){
                         block.classList.add('selected');
                     }
-                    block.classList.add('outlined');
+                    if (player){
+                        block.classList.add('outlined');
+                    }
                     var p = document.createElement('p')
                     p.innerHTML = 'X'
                     block.appendChild(p);
@@ -637,10 +639,6 @@ function start(){
     }
 
     function normalComputerBehaviour(){
-        var tr;
-        var tc;
-        var shotCell;
-
         function posOk(){
             if ((shotCell == 1) || (shotCell == 2)) {return false}  // checking if shot in actual shoted cell
 
@@ -650,10 +648,14 @@ function start(){
                     if (cell == 1) {return false}
                 }
             }
+            return true;
+        }
 
-            var longestShip = playerRemainingShips[0]   //to finding pos whene most long ship can be located
-            var mostMatchingLen = 0
-            for (var trIter = tr - longestShip; trIter <= tr + longestShip; trIter++){  // loop for all vertical pos when probably ship can be
+        function countProbablyShipsInThisPos(){
+            var longestShip = playerRemainingShips[0];   //to finding pos whene most long ship can be located
+            var mostMatchingLen = 0;
+            var probablyLocatedShipsLen = 0;
+            for (var trIter = tr - (longestShip - 1); trIter <= tr + (longestShip - 1); trIter++){  // loop for all vertical pos when probably ship can be
                 if ((trIter < 1) || (trIter > 10)) {continue}
                 var canLocate = true;
                 
@@ -673,10 +675,13 @@ function start(){
                 } else {
                     mostMatchingLen = 0;
                 }
-                if (mostMatchingLen >= longestShip) {return true}
+                if (mostMatchingLen >= longestShip) {
+                    probablyLocatedShipsLen ++;
+                }
             }
 
-            for (var tcIter = tc - longestShip; tcIter <= tc + longestShip; tcIter++){  // loop for all horizontal pos when probably ship can be
+            mostMatchingLen = 0;
+            for (var tcIter = tc - (longestShip - 1); tcIter <= tc + (longestShip - 1); tcIter++){  // loop for all horizontal pos when probably ship can be
                 if ((tcIter < 1) || (tcIter > 10)) {continue}
                 var canLocate = true;
 
@@ -696,26 +701,48 @@ function start(){
                 } else {
                     mostMatchingLen = 0;
                 }
-                if (mostMatchingLen >= longestShip) {return true}
+                if (mostMatchingLen >= longestShip) {
+                    probablyLocatedShipsLen ++;
+                }
             }
-            return false;
+            console.log(`Computer checking pos ${tr} ${tc}, probably located ships: ${probablyLocatedShipsLen}`);
+            return probablyLocatedShipsLen;
         }
 
-        var i = 0;
-        do {
-            i ++
-            if (i > 80){ 
-                console.log('ERROR: loop finding the best optimal position computer shot take too long');
-                break;
+        var tr;
+        var tc;
+        var shotCell;
+
+        const POSITION_COUNT_TO_CHECK = 20;
+        var mostCountProbablyLocatedShips = 0;
+        var mostCountProbablyLocatedShipsPos = null;
+
+        for (let posCount = 0; posCount < POSITION_COUNT_TO_CHECK; posCount++) {
+            var i = 0;
+            do {
+                i ++
+                if (i > 80){ 
+                    console.log('ERROR: loop finding good position computer shot take too long');
+                    break;
+                }
+                tr = Math.round(Math.random() * 9) + 1;
+                tc = Math.round(Math.random() * 9) + 1;
+                shotCell = computerKnowledgeBoard[tr][tc];
+            } while (!posOk());
+
+            var probablyShipCount = countProbablyShipsInThisPos();
+            if (probablyShipCount >= mostCountProbablyLocatedShips){
+                mostCountProbablyLocatedShips = probablyShipCount;
+                mostCountProbablyLocatedShipsPos = [tr, tc];
             }
-            tr = Math.round(Math.random() * 9) + 1;
-            tc = Math.round(Math.random() * 9) + 1;
-            shotCell = computerKnowledgeBoard[tr][tc];
-        } while (!posOk());
-        return [tr, tc];
+        }
+        console.log(`shot ${mostCountProbablyLocatedShips}, ${mostCountProbablyLocatedShipsPos}`);
+        return mostCountProbablyLocatedShipsPos;
     }
 
     function computerwhenHasShipToDestroy(){
+        // function to destroying player ships
+
         // returning pos to shot
         console.log('computerwhenHasShipToDestroy()');
         var fr = findedPlayerShipPos[0] // finded row
@@ -725,7 +752,7 @@ function start(){
          computerKnowledgeBoard[positions[2][0]][positions[2][1]], computerKnowledgeBoard[positions[3][0]][positions[3][1]]]  
         // in system N, E, S, W, 0 - blank, 1 - hit, 2 - not hit, 3 - place when shouldn't locate, near other ship, beyond edge
 
-        //init 3 control
+        // init 3 control to table near pos status
         // loading near ship
         var posIter = 0;
         positions.forEach(position => {
