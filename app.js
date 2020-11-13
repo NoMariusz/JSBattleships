@@ -527,6 +527,9 @@ function start(){
         }
         console.log(`Computer maked turn tr ${tr} tc ${tc}, hit ${hit}`);
         console.log('computerKnowledgeBoard', computerKnowledgeBoard);
+        if ((!playerTurn) && (mainGameStarted)){    // that mainGameStarted to not make move after computer win
+            setTimeout(computerMove, 1000);
+        }
     }
 
     function shot(row, column, byPlayer=true){
@@ -551,9 +554,7 @@ function start(){
             }
             checkIfShipDestroyed(row, column, !byPlayer);
         }
-        if (hit && byPlayer){   // to make next move when player hit
-            playerTurn = true;
-        } else {
+        if (!hit){
             playerTurn = !playerTurn;
         }
         reRenderBoardByArray(!byPlayer);
@@ -618,6 +619,9 @@ function start(){
         }
         if (findedPlayerShipPos.length > 0){
             var pos = computerwhenHasShipToDestroy();
+            if (pos == false){  // when something crash in computer AI
+                pos = normalComputerBehaviour()
+            }
             return pos;
         }
         var pos = normalComputerBehaviour()
@@ -719,7 +723,26 @@ function start(){
         var positions = [[fr - 1, fc], [fr, fc + 1], [fr + 1, fc], [fr, fc - 1]]    // in system N, E, S, W
         var nearPosStatus = [computerKnowledgeBoard[positions[0][0]][positions[0][1]], computerKnowledgeBoard[positions[1][0]][positions[1][1]],
          computerKnowledgeBoard[positions[2][0]][positions[2][1]], computerKnowledgeBoard[positions[3][0]][positions[3][1]]]  
-        // in system N, E, S, W, 0 - blank, 1 - hit, 2 - not hit, 3 - beyond edge
+        // in system N, E, S, W, 0 - blank, 1 - hit, 2 - not hit, 3 - place when shouldn't locate, near other ship, beyond edge
+
+        //init 3 control
+        // loading near ship
+        var posIter = 0;
+        positions.forEach(position => {
+            var tr = position[0];
+            var tc = position[1];
+            var mainCellVar = computerKnowledgeBoard[tr][tc]
+            for (var trIter = tr - 1; trIter <= tr + 1; trIter++){       // loop checking for can ideally locate ship in that cell
+                for (var tcIter = tc - 1; tcIter <= tc + 1; tcIter++){
+                    if ((trIter >= 11) || (trIter <= 0)  || (tcIter >= 11) || (tcIter <= 0)) {continue}
+                    var cellVar = computerKnowledgeBoard[trIter][tcIter]
+                    if ((cellVar == 1) && (mainCellVar == 0) && ((tr != fr) && (tc != fc))){    // if checking to change control to 3 when in that cell is other ship   
+                        nearPosStatus[posIter] = 3;
+                    }
+                }
+            }
+            posIter++;
+        });
 
         // loading beyond edge
         if (fr - 1 <= 0){
@@ -751,7 +774,7 @@ function start(){
                 var shipLen = 1;
                 while(checkingVar == 1){    // loop finding other end of ship
                     shipLen ++;
-                    if (shipLen > 40) {console.log('ERROR: finding other end of ship take too long'); return False;}
+                    if (shipLen > 40) {console.log('ERROR: finding other end of ship take too long'); return false;}
                     switch (hitIndex) {
                         case 0:
                             checkingPos[0] --;
@@ -815,7 +838,7 @@ function start(){
 
         do {
             i ++
-            if (i > 40) {console.log('ERROR: finding random balank place around hit take too long'); return False;}
+            if (i > 40) {console.log('ERROR: finding random balank place around hit take too long'); return false;}
             randomHitPos = Math.round(Math.random() * 3);
             randomHitVal = nearPosStatus[randomHitPos];
         } while (!randomHitOk())
@@ -840,6 +863,7 @@ function start(){
     function playerLose(){
         alert('Niestety przegrałeś, spróbuj ponownie');
         reRenderBoardByArray(false, true);
+        mainGameStarted = false;
         setTimeout(reloadGame, 3000);
     }
 
