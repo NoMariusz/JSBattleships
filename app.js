@@ -5,13 +5,14 @@ const boardSize = 10;
 const boardCellSizePercent = 100/boardSize;
 const boardPXSize = 400;
 const boardHeadSize = 35;
+const UNDERLINIG = true;
 
 var playerBoard = [];
 var computerBoard = [];
 var selectedShip = null;
 var settingPosition = 0; //0 - poziom, 1 - pion
-// Znaczenie kontrolek w tablicy: 0 - puste pole, 1 - ustawiony statek, 2 - można ustawić statek, 3 - nie można ustwić statku
-// 5 - nietrafiony, 6 - trafiony, 7 - obrysowany trafiony
+// Table controls meaning: 0 - blank field, 1 - located ship, 2 - can locate ship, 3 - can not locate ship
+// 5 - not hit, 6 - hit, 7 - outlined hit
 var actualBlock = null;
 
 var mainGameStarted = false;
@@ -20,6 +21,7 @@ var playerShipPoints = 0;   // ship cells count in player board
 shipsLengths.map(el => playerShipPoints += el);
 var computerShipPoints = playerShipPoints;
 var playerRemainingShips = [...shipsLengths.sort((a, b) => b - a)]
+var computerRemainingShips = [...shipsLengths.sort((a, b) => b - a)]
 
 var computerKnowledgeBoard = []; // board only with that, what computer see in player board
 // in computerKnowledgeBoard 0 - blank cell, 1 - hit cell, 2- not hit cell
@@ -55,31 +57,31 @@ function start(){
     }
 
     function setShipsInComputerBoardtable(){
-        // ustawianie statków
+        // locating ship
         var canShipLocated = false;
-        var shipPos = 0 // 0 - poziom, 1 - pion
+        var shipPos = 0 // 0 - horizontal, 1 - vertical
         shipsLengths.forEach(shipLong => {
             canShipLocated = false;
             while(! canShipLocated){
-                //randomizuje pozycję(pion, poziom), x, y
+                //random pos (vertical, horizontal), x, y
                 shipPos = Math.round(Math.random());
-                if (shipPos == 0){  //poziom
+                if (shipPos == 0){  // horizontal
                     var randomX = Math.round(Math.random() * (boardSize - shipLong) + 1);
                     var randomY = Math.round(Math.random() * (boardSize - 1) + 1);
-                } else {        // pion
+                } else {        // vertical
                     var randomX = Math.round(Math.random() * (boardSize - 1) + 1);
                     var randomY = Math.round(Math.random() * (boardSize - shipLong) + 1);
                 }
 
-                // sprawdzanie, czy mozna ustawić statek
+                // checking if can locate ship
                 canShipLocated = checkShipLocation(shipPos, randomY, randomX, shipLong, computerBoard);
             };
-            // ustawia statek w tablicy
-            if (shipPos == 0){  // poziom
+            // locating ship in table
+            if (shipPos == 0){  // horizontal 
                 for (var locateIter = randomX; locateIter < randomX + shipLong; locateIter++){
                     computerBoard[randomY][locateIter] = 1;
                 }
-            } else {    // pion
+            } else {    // vertical
                 for (var locateIter = randomY; locateIter < randomY + shipLong; locateIter++){
                     computerBoard[locateIter][randomX] = 1;
                 }
@@ -89,8 +91,8 @@ function start(){
     }
 
     function checkShipLocation(shipPos, tableRow, tableColumn, shipLong, board){
-        // sprawdza, czy mona ustawić statek w tablicy
-        if (shipPos == 0){  //poziom
+        // checking if can locate ship in table in that pos
+        if (shipPos == 0){  // horizontally
             for (var checkIter = tableRow-1; checkIter <= tableRow + 1; checkIter++){
                 for (var checkIter2 = tableColumn-1; checkIter2 <= tableColumn + shipLong; checkIter2++){
                     if (checkIter2 > boardSize + 1) return false;
@@ -99,7 +101,7 @@ function start(){
                     }
                 }
             }
-        } else {    // pion
+        } else {    // vertically
             for (var checkIter = tableRow-1; checkIter <= tableRow + shipLong; checkIter++){
                 if (checkIter > boardSize + 1) return false;
                 for (var checkIter2 = tableColumn-1; checkIter2 <= tableColumn + 1; checkIter2++){
@@ -116,7 +118,7 @@ function start(){
         var board = player ? playerBoard : computerBoard;
         console.log('rendering board by arr', board);
         var boardParrent = player ? playerBoardParrent : computerBoardParrent;
-        // renderowanie planszy z tablicy
+        // randering board by array
         boardParrent.style.width = boardPXSize + 'px';
         boardParrent.parentElement.style.width = boardPXSize + 'px';
         boardParrent.style.height = boardPXSize + 'px';
@@ -139,7 +141,7 @@ function start(){
                     block.onclick = playerClickOnComputerCell;
                 }
 
-                switch (board[tableRow][tableColumn]) { // switch który nadaje odpowiedni kolor w tablicy zależnie od kontrolki
+                switch (board[tableRow][tableColumn]) { // switch adding right color class to cell according to control in table
                     case 1:
                         if (player){
                             block.classList.add('selected');
@@ -162,16 +164,16 @@ function start(){
     }
 
     function reRenderBoardByArray(player=true, showShips=false){
+        // refreshing cell colors according to table var
         var board = player ? playerBoard : computerBoard;
         var boardParrent = player ? playerBoardParrent : computerBoardParrent;
-        // odświeża kolory komórek w planszy na podstawie wartości z tablicy
         for (var iter = 0; iter < boardParrent.children.length; iter++){
             var block = boardParrent.children[iter];
             var tr = parseInt(block.dataset.tableRow);
             var tc = parseInt(block.dataset.tableColumn);
             clearOtherColors(block);
-            block.innerHTML = '';// for do usuwania nodów strzałów
-            switch (board[tr][tc]) { // switch który nadaje odpowiedni kolor w tablicy zależnie od kontrolki
+            block.innerHTML = '';// for to delete hit nodes
+            switch (board[tr][tc]) { // switch adding right color class to cell according to control in table
                 case 1:
                     if ((player) || (showShips)){
                         block.classList.add('selected');
@@ -191,7 +193,7 @@ function start(){
                     break;
                 case 5:
                     var p = document.createElement('p')
-                    p.innerHTML = '.'
+                    p.innerHTML = 'o'
                     block.appendChild(p);
                     break;
                 case 6:
@@ -206,7 +208,7 @@ function start(){
                     if ((showShips) || (player)){
                         block.classList.add('selected');
                     }
-                    if (player){
+                    if (UNDERLINIG){
                         block.classList.add('outlined');
                     }
                     var p = document.createElement('p')
@@ -217,7 +219,7 @@ function start(){
         }
     }
 
-    function clearOtherColors(elem){        // czyści klasy inncyh kolorów z elementu
+    function clearOtherColors(elem){        // clearing other color classes
         ['ok', 'badPosition', 'selected', 'badPositionShipBellow', 'outlined'].forEach((colorClass) => {
             elem.classList.remove(colorClass);
         });
@@ -232,7 +234,7 @@ function start(){
     }
 
     function displayLocationToBlock(){
-        // pokazuje kolorując tablicę, możliwość ustawienia statku i daje możliwośc jej zatwierdzenia
+        // showing by painting table possibility to locate ship and gave chace to locate ship
         var shipLen = parseInt(selectedShip.dataset.len);
         var tr = parseInt(actualBlock.dataset.tableRow);
         var tc = parseInt(actualBlock.dataset.tableColumn);
@@ -264,11 +266,11 @@ function start(){
     }
     
     function moveAtBorder(shipLen, tr, tc, shipPos){
-        if (shipPos == 0){ //poziom
+        if (shipPos == 0){ //horizontally
             if (tc + shipLen > 11) {
                 tc = 12 - shipLen - 1
             }
-        } else {    //pion
+        } else {    //vertically
             if (tr + shipLen > 11) {
                 tr = 12 - shipLen - 1
             }
@@ -277,7 +279,7 @@ function start(){
     }
 
     function locateShip(shipPos, tableRow, tableColumn, shipLong, locationcontrol, board){
-        // ustawia statek w tablicy, zaznaczając w tablicy odpowiednio kontrolki
+        // locating ship in table by changing controls
         if (shipPos == 0){  // poziom
             for (var locateIter = tableColumn; locateIter < tableColumn + shipLong; locateIter++){
                 if (locateIter > boardSize) break; 
@@ -300,7 +302,7 @@ function start(){
     }
 
     function userAcceptLocation(tr, tc, board){
-        // wtedy gdy użytkownik potwierdza chęć ustawienia statku w tablicy
+        // when user accept locating in that cell
         var shipLong = parseInt(selectedShip.dataset.len)
         locateShip(settingPosition, tr, tc, shipLong, 1, playerBoard)
         clearInconstantControlsFromBoard(playerBoard);
@@ -312,6 +314,7 @@ function start(){
 
     function clearInconstantControlsFromBoard(board=playerBoard){
         // usuwa z tablicy wszystkie komórki z wartościami niestałymi, czyli 2 i 3 symbolizujące możliwość lub nie ustawienia statku
+        // deleting from table all cells with inconstant vars (2 and 3) that showing possibility locate ship
         for (var tableRow = 0; tableRow < board.length; tableRow++){
             for (var tableColumn = 0; tableColumn  < board[tableRow].length; tableColumn++){
                 if (board[tableRow][tableColumn] == 2 || board[tableRow][tableColumn] == 3){
@@ -357,7 +360,7 @@ function start(){
         return ship
     }
 
-    function selectShip(ship){   // funkcja służąca do zaznaczenia statku
+    function selectShip(ship){   // function to selcet ship
         console.log(`Select ship: ${ship.dataset.len}`);
         if (selectedShip != null){
             selectedShip.classList.remove('selected');
@@ -424,15 +427,15 @@ function start(){
     }
 
     function initChangeShipPosition(e){
-        // załącza możliwość zmiany pozycji
+        // adding possibility to change position
         playerBoardParrent.addEventListener('contextmenu', (e) => {
             console.log('context menu event', settingPosition);
-            e.preventDefault(); // zapobiega normalnemu zachowaniu
-            settingPosition = settingPosition == 1 ? 0 : 1;     // zmienia kierunek na inny
-            // czyści planszę z pokazanej możliwości ustawienia statku, aby pokazać nową
+            e.preventDefault(); // prevent normal displaying context menu
+            settingPosition = settingPosition == 1 ? 0 : 1;     // changing direction to other
+            // clearing board from displaying possibility of locate , to show new possibility
             clearInconstantControlsFromBoard();
             reRenderBoardByArray();
-            // pokazuje nową opcję lokowania 
+            // showing new locating option 
             if (selectedShip != null && actualBlock != null){
                 displayLocationToBlock();
             }
@@ -511,7 +514,7 @@ function start(){
         if (! playerTurn) return false;
         var tableRow = block.dataset.tableRow;
         var tableColumn = block.dataset.tableColumn;
-        if ((computerBoard[tableRow][tableColumn] == 6) || (computerBoard[tableRow][tableColumn] == 5)) return false;
+        if ((computerBoard[tableRow][tableColumn] == 6) || (computerBoard[tableRow][tableColumn] == 7) || (computerBoard[tableRow][tableColumn] == 5)) return false;
         return true;
     }
 
@@ -554,7 +557,12 @@ function start(){
             } else {
                 playerShipPoints --;
             }
-            checkIfShipDestroyed(row, column, !byPlayer);
+        }
+        cisdReturn = checkIfShipDestroyed(row, column, !byPlayer);
+        if (cisdReturn[0] && byPlayer){
+            var shipLenIdx = computerRemainingShips.indexOf(cisdReturn[1]);
+            console.log('destroying ship in computerRemainingShips at idx', shipLenIdx, cisdReturn);
+            computerRemainingShips.splice(shipLenIdx, 1);
         }
         if (!hit){
             playerTurn = !playerTurn;
@@ -564,9 +572,11 @@ function start(){
         return hit;
     }
 
-    function checkIfShipDestroyed(row, column, checkPlayerboard){     // to make underlines
+    function checkIfShipDestroyed(row, column, checkPlayerboard){     // to make smart underlines, only when ship must be underlined
+        console.log(`checkIfShipDestroyed${row}, ${column}, ${checkPlayerboard}`)
         var board = checkPlayerboard ? playerBoard : computerBoard;
         var posToChecked = [[row, column]]   //starting pos to underline
+        var  remainingShipsTable = checkPlayerboard ? playerRemainingShips : computerRemainingShips
         var allPos = [];
         var findNotHitCell = false;
 
@@ -580,9 +590,12 @@ function start(){
             return is;
         }
 
+        // findidng all pos of that ship what can be destroyed
         while (posToChecked.length > 0){    // while ends when not find any more adjacent and not checked ship fields
             posToChecked.forEach(pos => {    // cleaning pos in board with finded ship blocks, to not find this pos in searching
-                allPos.push(pos)
+                if (board[pos[0]][pos[1]] == 6){
+                    allPos.push(pos)
+                }
             })
             var findedPos = [];     //array for finded pos in this checking
             posToChecked.forEach(pos => {   // for all position to check, checking and finding adjacent ship positions 
@@ -590,26 +603,150 @@ function start(){
                 var actualfindedCellshipColumn = pos[1];
                 for (var tableRow = actualfindedCellshipRow - 1; tableRow <= actualfindedCellshipRow + 1; tableRow++){  // double for checking pos around position pos
                     for (var tableColumn = actualfindedCellshipColumn - 1; tableColumn  <= actualfindedCellshipColumn + 1; tableColumn++){
-                        if ((board[tableRow][tableColumn] == 6) && (!checkIsPosInAllPos([tableRow, tableColumn]))){      // if is ship hitten and that is new pos
-                            findedPos.push([tableRow, tableColumn]);    // if find hited cell append to all pos list
-                        } else if (board[tableRow][tableColumn] == 1){
+                        if (((board[tableRow][tableColumn] == 6) || (board[tableRow][tableColumn] == 7)) && (!checkIsPosInAllPos([tableRow, tableColumn]))){      // if is ship hit and that is new pos
+                            findedPos.push([tableRow, tableColumn]);    // if find hit cell append to all pos list
+                        } else if ((board[tableRow][tableColumn] == 1) && (board[pos[0]][pos[1]] == 6)){
                             findNotHitCell = true  // if find ship cell that not hit, not underlining
-                            return false;
                         }
                     }
                 }
             })
             posToChecked = [...findedPos];  // when pos is checked, that finded pos of ships blocks need to be checked and cleaned from 1 to 0 control in board 
         }
+        if (findNotHitCell || allPos.length <= 0){  // if not find ship, then return false
+            return [false, 0];
+        }
 
-        if (! findNotHitCell){   // underlining if not find ship cell that is not hit
+        // checking if underline ship
+        var underlining = false;
+        
+        // finding his direction
+        var direction = 0;  // 0 - horizontal, 1 - vertical, 2 - check to all directions, only when is 1cellShip
+        console.log('checking diection', allPos);
+        allPos.forEach(pos => {
+            console.log(allPos[0][0], pos[0]);
+            if (allPos[0][0] != pos[0]){
+                direction = 1;
+            }
+        });
+        if (allPos.length == 1) { direction = 2}
+        console.log('checking if underlying', allPos, direction);
+        
+        // test searching if in positions near ship are cells that can tell us if ship is destroyed
+        var underlyingTestPassed = true;
+        allPos.forEach(pos => { // if finded ship has near fields that lock probability of be there ship then underying
+            console.log('0', pos);
+            if (board[pos[0]][pos[1]] != 6){return}
+            if(direction == 0){
+                for(var tcIter = pos[1] - 1; tcIter <= pos[1] + 1; tcIter++){
+                    console.log('ync');
+                    if (tcIter == pos[1]){continue};
+                    var field = board[pos[0]][tcIter];
+                    console.log('1', pos[0], tcIter);
+                    if (field == 1){
+                        underlyingTestPassed = false;
+                        break;
+                    } 
+                    if (field == 0){
+                        if (tcIter < 1 || tcIter > 10) {continue}
+                        
+                        var checkingSiblingWith6 = false;
+                        for (var iter1 = pos[0] - 1; iter1 <= pos[0] + 1; iter1++){
+                            for (var iter2 = tcIter - 1; iter2 <= tcIter + 1; iter2++){
+                                var pos2 = [iter1, iter2];
+                                console.log('2', pos2);
+                                if ((!checkIsPosInAllPos(pos2)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
+                                    console.log('sasiaduje z 6');
+                                    checkingSiblingWith6 = true;
+                                }
+                            }
+                        }
+                        if (!checkingSiblingWith6){
+                            console.log('niesasiaduje z 6');
+                            underlyingTestPassed = false;
+                            break;
+                        }
+                    }
+                }
+            } else  if (direction == 1){
+                for(var trIter = pos[0] - 1; trIter <= pos[0] + 1; trIter++){
+                    console.log('ync');
+                    if (trIter == pos[0]){continue};
+                    var field = board[trIter][pos[1]];
+                    console.log('1', trIter, pos[1]);
+                    if (field == 1){
+                        underlyingTestPassed = false;
+                        break;
+                    } 
+                    if (field == 0){
+                        if (trIter < 1 || trIter > 10) {continue}
+                        
+                        var checkingSiblingWith6 = false;
+                        for (var iter1 = pos[1] - 1; iter1 <= pos[1] + 1; iter1++){
+                            for (var iter2 = trIter - 1; iter2 <= trIter + 1; iter2++){
+                                var pos2 = [iter2, iter1];
+                                console.log('2', pos2);
+                                if ((!checkIsPosInAllPos(pos)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
+                                    console.log('sasiaduje z 6');
+                                    checkingSiblingWith6 = true;
+                                }
+                            }
+                        }
+                        if (!checkingSiblingWith6){
+                            console.log('niesasiaduje z 6');
+                            underlyingTestPassed = false;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                for(var trIter = pos[0] - 1; trIter <= pos[0] + 1; trIter++){
+                    for(var tcIter = pos[1] - 1; tcIter <= pos[1] + 1; tcIter++){
+                        console.log('ync');
+                        if ((trIter != pos[0]) == (tcIter != pos[1])){continue};    // to check only fields on straight line near
+                        var field = board[trIter][tcIter];
+                        console.log('1', trIter, tcIter);
+                        if (field == 1){
+                            underlyingTestPassed = false;
+                            break;
+                        } 
+                        if (field == 0){
+                            if (trIter < 1 || trIter > 10 || tcIter < 1 || tcIter > 10) {continue}
+                            
+                            var checkingSiblingWith6 = false;
+                            for (var iter2 = tcIter - 1; iter2 <= tcIter + 1; iter2++){
+                                for (var iter1 = trIter - 1; iter1 <= trIter + 1; iter1++){
+                                    var pos2 = [iter1, iter2];
+                                    console.log('2', pos2);
+                                    if ((!checkIsPosInAllPos(pos)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
+                                        console.log('sasiaduje z 6');
+                                        checkingSiblingWith6 = true;
+                                    }
+                                }
+                            }
+                            if (!checkingSiblingWith6){
+                                console.log('niesasiaduje z 6');
+                                underlyingTestPassed = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (underlyingTestPassed) {underlining = true}
+        if (allPos.length >= remainingShipsTable[0]) {underlining = true}    // if finded ship len is like most len ship then underlying
+        
+        if (underlining){   // underlining
+            console.log('underlining!!!');
             var shipLen = 0
             allPos.forEach((pos) => {
                 board[pos[0]][pos[1]] = 7;
                 shipLen ++;
             })
         }
-        return !findNotHitCell;
+        return [underlining, shipLen];
     }
     
     function computerPrepareShot(){
@@ -652,6 +789,7 @@ function start(){
         }
 
         function countProbablyShipsInThisPos(){
+            // function find how much most long ships can have cell in that pos
             var longestShip = playerRemainingShips[0];   //to finding pos whene most long ship can be located
             var mostMatchingLen = 0;
             var probablyLocatedShipsLen = 0;
@@ -713,10 +851,11 @@ function start(){
         var tc;
         var shotCell;
 
-        const POSITION_COUNT_TO_CHECK = 20;
+        const POSITION_COUNT_TO_CHECK = 35;
         var mostCountProbablyLocatedShips = 0;
         var mostCountProbablyLocatedShipsPos = null;
-
+        // application random POSITION_COUNT_TO_CHECK times positions, then count how much ships can be located at that cells, and then shoot
+        // at position when are the most ship can have cell
         for (let posCount = 0; posCount < POSITION_COUNT_TO_CHECK; posCount++) {
             var i = 0;
             do {
@@ -763,7 +902,7 @@ function start(){
                 for (var tcIter = tc - 1; tcIter <= tc + 1; tcIter++){
                     if ((trIter >= 11) || (trIter <= 0)  || (tcIter >= 11) || (tcIter <= 0)) {continue}
                     var cellVar = computerKnowledgeBoard[trIter][tcIter]
-                    if ((cellVar == 1) && (mainCellVar == 0) && ((tr != fr) && (tc != fc))){    // if checking to change control to 3 when in that cell is other ship   
+                    if ((cellVar == 1) && (mainCellVar == 0) && ((trIter != fr) || (tcIter != fc))){    // if checking to change control to 3 when in that cell is other ship   
                         nearPosStatus[posIter] = 3;
                     }
                 }
@@ -830,6 +969,7 @@ function start(){
         // to know when they destory one-cell ship
         var haveBlank = nearPosStatus.includes(0);
         if (! haveBlank){
+            console.log('Computer behaviour when destroying ship: not have blank', nearPosStatus);
             computerKnowDestoryShip(1)
             return normalComputerBehaviour();
         }
@@ -891,7 +1031,7 @@ function start(){
         alert('Niestety przegrałeś, spróbuj ponownie');
         reRenderBoardByArray(false, true);
         mainGameStarted = false;
-        setTimeout(reloadGame, 3000);
+        setTimeout(reloadGame, 6000);
     }
 
     function reloadGame(){

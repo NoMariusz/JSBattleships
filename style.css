@@ -23,15 +23,15 @@
 }
 .shipsToLocate{
     width: 20%;
-    background-color: aliceblue;
+    background-color: white;
 }
 .playerBoard{
-    background-color: aliceblue;
+    background-color: white;
     position: relative;
     box-sizing: border-box;
 }
 .computerBoard{
-    background-color: aliceblue;
+    background-color: white;
     position: relative;
     box-sizing: border-box;
 }
@@ -48,8 +48,18 @@
     margin: 0;
     font-size: 23px;
 }
-.startBtn{
-    margin-top: 20px;
+#startBtn{
+    margin-top: 70px;
+    padding: 10px;
+    background-color: #8076A6;
+    color: white;
+    font-size: 20px;
+    border: 1px solid black;
+    transition:background 0.3s;
+}
+
+#startBtn:hover{
+    background-color: #D9C6B0;
 }
 
 .ship{
@@ -60,24 +70,24 @@
     float: left;
 }
 .selected{
-    background-color: blue;
+    background-color: #8076A6;
 }
 .unselected{
-    background-color: gray;
+    background-color: white;
 }
 .ok{
-    background-color: green;
+    background-color: #79D988;
 }
 .badPosition{
-    background-color: red;
+    background-color: #F25E6B;
 }
 .badPositionShipBellow{
-    background-color: lightcoral;
+    background-color: #D982AB;
 }
 .outlined{
-    outline: 3px solid tomato;
+    outline: 3px solid #79D988;
     z-index: 2;
 }
 .hover{
-    background-color: lightblue;
+    background-color:#D9C6B0;
 }
