@@ -5,7 +5,8 @@ const boardSize = 10;
 const boardCellSizePercent = 100/boardSize;
 const boardPXSize = 400;
 const boardHeadSize = 35;
-const UNDERLINIG = true;
+const UNDERLINIG = true;    // to enable/disable underlinig at all boards
+const LOG = false;      // to disable not main logs
 
 var playerBoard = [];
 var computerBoard = [];
@@ -531,7 +532,7 @@ function start(){
             computerKnowledgeBoard[tr][tc] = 2
         }
         console.log(`Computer maked turn tr ${tr} tc ${tc}, hit ${hit}`);
-        console.log('computerKnowledgeBoard', computerKnowledgeBoard);
+        if (LOG){console.log('computerKnowledgeBoard', computerKnowledgeBoard);}
         if ((!playerTurn) && (mainGameStarted)){    // that mainGameStarted to not make move after computer win
             setTimeout(computerMove, 1000);
         }
@@ -561,6 +562,10 @@ function start(){
         cisdReturn = checkIfShipDestroyed(row, column, !byPlayer);
         if (cisdReturn[0] && byPlayer){
             var shipLenIdx = computerRemainingShips.indexOf(cisdReturn[1]);
+            if (shipLenIdx == -1){
+                console.log('ERROR: shipLenIdx when removing from computerRemainingShips is -1');
+                console.log([...computerRemainingShips], shipLenIdx, cisdReturn);
+            }
             console.log('destroying ship in computerRemainingShips at idx', shipLenIdx, cisdReturn);
             computerRemainingShips.splice(shipLenIdx, 1);
         }
@@ -573,17 +578,17 @@ function start(){
     }
 
     function checkIfShipDestroyed(row, column, checkPlayerboard){     // to make smart underlines, only when ship must be underlined
-        console.log(`checkIfShipDestroyed${row}, ${column}, ${checkPlayerboard}`)
+        if (LOG){console.log(`checkIfShipDestroyed${row}, ${column}, player ship: ${checkPlayerboard}`)}
         var board = checkPlayerboard ? playerBoard : computerBoard;
         var posToChecked = [[row, column]]   //starting pos to underline
         var  remainingShipsTable = checkPlayerboard ? playerRemainingShips : computerRemainingShips
         var allPos = [];
         var findNotHitCell = false;
 
-        function checkIsPosInAllPos(pos){
+        function checkIsPosInAllPos(poss){
             var is = false;
             allPos.forEach(aPos => {
-                if ((aPos[0] == pos[0]) &&(aPos[1] == pos[1])){
+                if ((aPos[0] == poss[0]) && (aPos[1] == poss[1])){
                     is = true;
                 }
             });
@@ -591,7 +596,11 @@ function start(){
         }
 
         // findidng all pos of that ship what can be destroyed
+        var it = 0;
         while (posToChecked.length > 0){    // while ends when not find any more adjacent and not checked ship fields
+            it ++;
+            if (it > 10) {console.log('ERROR, posToCheckedLoop to long !!!!');break;}
+            if (LOG){console.log('posToChecked loop',posToChecked);}
             posToChecked.forEach(pos => {    // cleaning pos in board with finded ship blocks, to not find this pos in searching
                 if (board[pos[0]][pos[1]] == 6){
                     allPos.push(pos)
@@ -603,9 +612,9 @@ function start(){
                 var actualfindedCellshipColumn = pos[1];
                 for (var tableRow = actualfindedCellshipRow - 1; tableRow <= actualfindedCellshipRow + 1; tableRow++){  // double for checking pos around position pos
                     for (var tableColumn = actualfindedCellshipColumn - 1; tableColumn  <= actualfindedCellshipColumn + 1; tableColumn++){
-                        if (((board[tableRow][tableColumn] == 6) || (board[tableRow][tableColumn] == 7)) && (!checkIsPosInAllPos([tableRow, tableColumn]))){      // if is ship hit and that is new pos
+                        if ((board[tableRow][tableColumn] == 6) && (!checkIsPosInAllPos([tableRow, tableColumn]))){      // if is ship hit and that is new pos
                             findedPos.push([tableRow, tableColumn]);    // if find hit cell append to all pos list
-                        } else if ((board[tableRow][tableColumn] == 1) && (board[pos[0]][pos[1]] == 6)){
+                        } else if ((board[tableRow][tableColumn] == 1) && (board[actualfindedCellshipRow][actualfindedCellshipColumn] == 6)){
                             findNotHitCell = true  // if find ship cell that not hit, not underlining
                         }
                     }
@@ -622,27 +631,26 @@ function start(){
         
         // finding his direction
         var direction = 0;  // 0 - horizontal, 1 - vertical, 2 - check to all directions, only when is 1cellShip
-        console.log('checking diection', allPos);
+        if (LOG){console.log('checking diection', allPos);}
         allPos.forEach(pos => {
-            console.log(allPos[0][0], pos[0]);
+            if (LOG){console.log(allPos[0][0], pos[0]);}
             if (allPos[0][0] != pos[0]){
                 direction = 1;
             }
         });
         if (allPos.length == 1) { direction = 2}
-        console.log('checking if underlying', allPos, direction);
+        if (LOG){console.log('checking if underlying', allPos, direction);}
         
         // test searching if in positions near ship are cells that can tell us if ship is destroyed
         var underlyingTestPassed = true;
         allPos.forEach(pos => { // if finded ship has near fields that lock probability of be there ship then underying
-            console.log('0', pos);
+            if (LOG){console.log('0', pos);}
             if (board[pos[0]][pos[1]] != 6){return}
             if(direction == 0){
                 for(var tcIter = pos[1] - 1; tcIter <= pos[1] + 1; tcIter++){
-                    console.log('ync');
                     if (tcIter == pos[1]){continue};
                     var field = board[pos[0]][tcIter];
-                    console.log('1', pos[0], tcIter);
+                    if (LOG){console.log('1', pos[0], tcIter);}
                     if (field == 1){
                         underlyingTestPassed = false;
                         break;
@@ -654,15 +662,15 @@ function start(){
                         for (var iter1 = pos[0] - 1; iter1 <= pos[0] + 1; iter1++){
                             for (var iter2 = tcIter - 1; iter2 <= tcIter + 1; iter2++){
                                 var pos2 = [iter1, iter2];
-                                console.log('2', pos2);
+                                if (LOG){console.log('2', pos2);}
                                 if ((!checkIsPosInAllPos(pos2)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
-                                    console.log('sasiaduje z 6');
+                                    if (LOG){console.log('near 6');}
                                     checkingSiblingWith6 = true;
                                 }
                             }
                         }
                         if (!checkingSiblingWith6){
-                            console.log('niesasiaduje z 6');
+                            if (LOG){console.log('not near 6');}
                             underlyingTestPassed = false;
                             break;
                         }
@@ -670,10 +678,9 @@ function start(){
                 }
             } else  if (direction == 1){
                 for(var trIter = pos[0] - 1; trIter <= pos[0] + 1; trIter++){
-                    console.log('ync');
                     if (trIter == pos[0]){continue};
                     var field = board[trIter][pos[1]];
-                    console.log('1', trIter, pos[1]);
+                    if (LOG){console.log('1', trIter, pos[1]);}
                     if (field == 1){
                         underlyingTestPassed = false;
                         break;
@@ -685,15 +692,15 @@ function start(){
                         for (var iter1 = pos[1] - 1; iter1 <= pos[1] + 1; iter1++){
                             for (var iter2 = trIter - 1; iter2 <= trIter + 1; iter2++){
                                 var pos2 = [iter2, iter1];
-                                console.log('2', pos2);
-                                if ((!checkIsPosInAllPos(pos)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
-                                    console.log('sasiaduje z 6');
+                                if (LOG){console.log('2', pos2);}
+                                if ((!checkIsPosInAllPos(pos2)) && ((board[iter2][iter1] == 6) || (board[iter2][iter1] == 7))) {
+                                    if (LOG){console.log('near 6');}
                                     checkingSiblingWith6 = true;
                                 }
                             }
                         }
                         if (!checkingSiblingWith6){
-                            console.log('niesasiaduje z 6');
+                            if (LOG){console.log('not near 6');}
                             underlyingTestPassed = false;
                             break;
                         }
@@ -702,10 +709,9 @@ function start(){
             } else {
                 for(var trIter = pos[0] - 1; trIter <= pos[0] + 1; trIter++){
                     for(var tcIter = pos[1] - 1; tcIter <= pos[1] + 1; tcIter++){
-                        console.log('ync');
                         if ((trIter != pos[0]) == (tcIter != pos[1])){continue};    // to check only fields on straight line near
                         var field = board[trIter][tcIter];
-                        console.log('1', trIter, tcIter);
+                        if (LOG){console.log('1', trIter, tcIter);}
                         if (field == 1){
                             underlyingTestPassed = false;
                             break;
@@ -717,15 +723,15 @@ function start(){
                             for (var iter2 = tcIter - 1; iter2 <= tcIter + 1; iter2++){
                                 for (var iter1 = trIter - 1; iter1 <= trIter + 1; iter1++){
                                     var pos2 = [iter1, iter2];
-                                    console.log('2', pos2);
-                                    if ((!checkIsPosInAllPos(pos)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
-                                        console.log('sasiaduje z 6');
+                                    if (LOG){console.log('2', pos2);}
+                                    if ((!checkIsPosInAllPos(pos2)) && ((board[iter1][iter2] == 6) || (board[iter1][iter2] == 7))) {
+                                        if (LOG){console.log('near 6');}
                                         checkingSiblingWith6 = true;
                                     }
                                 }
                             }
                             if (!checkingSiblingWith6){
-                                console.log('niesasiaduje z 6');
+                                if (LOG){console.log('not near 6');}
                                 underlyingTestPassed = false;
                                 break;
                             }
@@ -739,7 +745,7 @@ function start(){
         if (allPos.length >= remainingShipsTable[0]) {underlining = true}    // if finded ship len is like most len ship then underlying
         
         if (underlining){   // underlining
-            console.log('underlining!!!');
+            if (LOG){console.log('underlining!!!');}
             var shipLen = 0
             allPos.forEach((pos) => {
                 board[pos[0]][pos[1]] = 7;
@@ -843,7 +849,7 @@ function start(){
                     probablyLocatedShipsLen ++;
                 }
             }
-            console.log(`Computer checking pos ${tr} ${tc}, probably located ships: ${probablyLocatedShipsLen}`);
+            // console.log(`Computer checking pos ${tr} ${tc}, probably located ships: ${probablyLocatedShipsLen}`);
             return probablyLocatedShipsLen;
         }
 
@@ -860,8 +866,8 @@ function start(){
             var i = 0;
             do {
                 i ++
-                if (i > 80){ 
-                    console.log('ERROR: loop finding good position computer shot take too long');
+                if (i > 40){ 
+                    console.log('Loop finding good position computer shot take too long, skipp');
                     break;
                 }
                 tr = Math.round(Math.random() * 9) + 1;
@@ -873,9 +879,10 @@ function start(){
             if (probablyShipCount >= mostCountProbablyLocatedShips){
                 mostCountProbablyLocatedShips = probablyShipCount;
                 mostCountProbablyLocatedShipsPos = [tr, tc];
+                if (probablyShipCount >= playerRemainingShips[0] *2){break} // if find the most optimal field, end finding other
             }
         }
-        console.log(`shot ${mostCountProbablyLocatedShips}, ${mostCountProbablyLocatedShipsPos}`);
+        console.log(`find pos to shot, probably ships: ${mostCountProbablyLocatedShips}, pos: ${mostCountProbablyLocatedShipsPos}`);
         return mostCountProbablyLocatedShipsPos;
     }
 
@@ -883,7 +890,7 @@ function start(){
         // function to destroying player ships
 
         // returning pos to shot
-        console.log('computerwhenHasShipToDestroy()');
+        console.log('computerwhenHasShipToDestroy() - start');
         var fr = findedPlayerShipPos[0] // finded row
         var fc = findedPlayerShipPos[1] //finded column
         var positions = [[fr - 1, fc], [fr, fc + 1], [fr + 1, fc], [fr, fc - 1]]    // in system N, E, S, W
@@ -929,7 +936,7 @@ function start(){
             var otherSideIndex = (hitIndex + 2) % 4   // checking pos at other side
             var checkingVal = nearPosStatus[otherSideIndex]
             if (checkingVal == 0){  // if at other side is not trying shot, try
-                console.log('returning pos', positions[otherSideIndex]);
+                if (LOG){console.log('returning pos', positions[otherSideIndex]);}
                 return positions[otherSideIndex]
             } else if (checkingVal == 1){   // this situation can not be true
                 console.log('ERROR: checking pos has near 2 shoted positions');
@@ -938,6 +945,7 @@ function start(){
                 var checkingPos = positions[hitIndex]
                 var checkingVar = computerKnowledgeBoard[checkingPos[0]][checkingPos[1]]
                 var shipLen = 1;
+                var lastPos = [checkingPos[0], checkingPos[1]]
                 while(checkingVar == 1){    // loop finding other end of ship
                     shipLen ++;
                     if (shipLen > 40) {console.log('ERROR: finding other end of ship take too long'); return false;}
@@ -956,12 +964,26 @@ function start(){
                             break;
                     }
                     checkingVar = computerKnowledgeBoard[checkingPos[0]][checkingPos[1]]
+                    if (checkingVar == 1){lastPos = [checkingPos[0], checkingPos[1]]}
                 }
-                if (checkingVar == 2){
+                var outOfIndex = (checkingPos[0] > 10) || (checkingPos[0] < 1) || (checkingPos[1] > 10) || (checkingPos[1] < 1);
+                var nearCellAvailabele = true;
+                var tr = checkingPos[0];
+                var tc = checkingPos[1];
+                for (var trIter = tr - 1; trIter <= tr + 1; trIter++){       // loop checking for can ideally locate ship in that cell
+                    for (var tcIter = tc - 1; tcIter <= tc + 1; tcIter++){
+                        if ((trIter >= 11) || (trIter <= 0)  || (tcIter >= 11) || (tcIter <= 0)) {continue}
+                        var cellVar = computerKnowledgeBoard[trIter][tcIter];
+                        if ((cellVar == 1) && ((trIter != lastPos[0]) || (tcIter != lastPos[1]))){    // if checking to change control to 3 when in that cell is other ship   
+                            nearCellAvailabele = false;
+                        }
+                    }
+                }
+                if ((checkingVar == 2) || (outOfIndex)){
                     computerKnowDestoryShip(shipLen);
                     return normalComputerBehaviour();
                 }
-                console.log('returning pos', checkingPos);
+                console.log('computerwhenHasShipToDestroy() returning pos', checkingPos);
                 return checkingPos  // returning first not ship pos
             }
         }
@@ -969,7 +991,7 @@ function start(){
         // to know when they destory one-cell ship
         var haveBlank = nearPosStatus.includes(0);
         if (! haveBlank){
-            console.log('Computer behaviour when destroying ship: not have blank', nearPosStatus);
+            if (LOG){console.log('Computer behaviour when destroying ship: not have blank', nearPosStatus);}
             computerKnowDestoryShip(1)
             return normalComputerBehaviour();
         }
@@ -1005,12 +1027,12 @@ function start(){
 
         do {
             i ++
-            if (i > 40) {console.log('ERROR: finding random balank place around hit take too long'); return false;}
+            if (i > 40) {console.log('ERROR: finding random balank place around hit take too long'); break;}
             randomHitPos = Math.round(Math.random() * 3);
             randomHitVal = nearPosStatus[randomHitPos];
         } while (!randomHitOk())
 
-        console.log('returning pos', positions[randomHitPos]);
+        console.log('computerwhenHasShipToDestroy() returning pos', positions[randomHitPos]);
         return positions[randomHitPos];
     }
 
@@ -1050,11 +1072,19 @@ function start(){
         // Znaczenie kontrolek w tablicy: 0 - puste pole, 1 - ustawiony statek, 2 - można ustawić statek, 3 - nie można ustwić statku
         // 5 - nietrafiony, 6 - trafiony
         actualBlock = null;
+
         mainGameStarted = false;
         playerTurn = true;
         playerShipPoints = 0;   // ship cells count in player board
         shipsLengths.map(el => playerShipPoints += el);
         computerShipPoints = playerShipPoints;
+        playerRemainingShips = [...shipsLengths.sort((a, b) => b - a)]
+        computerRemainingShips = [...shipsLengths.sort((a, b) => b - a)]
+
+        computerKnowledgeBoard = []; // board only with that, what computer see in player board
+        // in computerKnowledgeBoard 0 - blank cell, 1 - hit cell, 2- not hit cell
+        findedPlayerShipPos = []; // var to store pos of ship cell that was not destroyed yet
+        shotingShipLen = 0;
 
         removeBadMoveAlerts();
         prepareGame(false);
